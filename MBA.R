@@ -7,6 +7,7 @@
 #*******************************import three Table from Server*******************************************
 
 library(RMySQL)
+library(ggplot2)
 
 ##Import df 'line_item'
 
@@ -101,6 +102,63 @@ glimpse(products)
 dim(products)
 colnames(products)
 
+
+#line_item$order_paid<-line_item$product_quantity*line_item$unit_price
+head(line_item)
+dim(line_item)
+line_price <- line_item %>% 
+        group_by(id_order) %>% 
+        summarise(count_price = sum(product_quantity * unit_price))
+dim(line_price)
+head(line_price)
+sum(is.null(line_price))
+
+#View(line_price)
+
+compare_total<-inner_join(line_price,orders,by="id_order")
+head(compare_total)
+dim(compare_total)
+
+compare_total$price_diff<-compare_total$total_paid-compare_total$count_price
+#comp_total$price_diff<-comp_total$count_price-comp_total$total_paid
+head(compare_total)
+dim(compare_total)
+
+
+
+compare_total %>% 
+        filter(price_diff < 10, price_diff > -10) %>% 
+        ggplot(aes(price_diff)) +
+        geom_histogram()
+
+#To explore individual id order 
+filter(compare_total,id_order==299552)
+        
+
+comp_10<-filter(compare_total,price_diff<10)
+count(comp_10)#that might be the delivery
+
+comp_10<-filter(compare_total,price_diff>10)
+count(comp_10)
+
+correct_price<-filter(compare_total,price_diff==0) 
+head(correct_price)
+dim(correct_price)
+
+
+
+incorrect_price<-filter(compare_total,price_diff!=0) 
+head(incorrect_price)
+dim(incorrect_price)
+summary(incorrect_price)
+#count(unique(incorrect_price$id_order))
+
+compare_total %>% 
+        filter(price_diff < 10, price_diff > -10) %>% 
+        ggplot(aes(correct_price)) +
+        geom_histogram()
+
+
 # Check that all orders in line_item are present in our orders dataset. 
 # Exclude from line_item any rows that do not meet that condition.
 
@@ -191,9 +249,13 @@ new_Line_item2 <- inner_join(new_Line_item_com, products, by="sku")
 dim(new_Line_item2)
 head(new_Line_item2)
 
+
+
 #list of the value of sku which is present in order dataset
-line_item[line_item$sku %in% new_Line_item2$sku,]
-count(line_item[line_item$sku %in% new_Line_item2$sku,])
+line_item[line_item$sku %in% 
+     new_Line_item2$sku,]
+count(line_item[line_item$sku %in% 
+         new_Line_item2$sku,])
 
 #list of the value of sku which is not present  in order table
 count(line_item[!(line_item$sku %in% new_Line_item2$sku),])
@@ -212,7 +274,7 @@ head(new_Line_item2)
 new_Line_item2_price<-select(new_Line_item2,id_order,unit_price,product_quantity,total_paid)
 head(new_Line_item2_price)
 
-new_Line_item2_price %>% group_by(id_order) %>% summarise(idcount=count(product_quantity))
+new_Line_item2_price %>% group_by(id_order) %>% summarise(cd=count(id_order))
 #final <- inner_join(new_Line_item_com, new_Line_item2)
 #dim(final)
 #glimpse(final)
