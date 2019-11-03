@@ -243,12 +243,10 @@ dim(comp_10_f_comp)
 head(comp_10_f_comp)
 ```
 ## Final table
+After checking the prices and excluding the ones that are not explainable, 
+we now have to join two exploratory data sets with the final dataset. 
 ```{r final_table}
-head(line_item)
-dim(line_item)
 
-dim(line_price)
-head(line_price)
 
 #line_new<-inner_join(line_item,line_price,by="id_order")
 head(line_new)
@@ -258,10 +256,6 @@ head(comp_10_f_comp)
 dim(comp_sku)
 head(comp_sku)
 
-dim(new_Line_item_com)
-head(new_Line_item_com)
-dim(comp_10_f_comp)
-head(comp_10_f_comp)
 count(sku_1000_f)
 dim(sku_1000_f)
 nrow(unique(sku_1000_f))
@@ -274,25 +268,69 @@ head(final_table)
 nrow(unique(final_table))
 
 final_final <- inner_join(final_table, sku_1000_f, by="id_order")
-head(final_1)
-dim(final_1)
-nrow(unique(final_1))
-nrow(duplicated(final_1))
-#-------------------------------######################
+head(final_final)
+dim(final_final)
+nrow(unique(final_final))
+nrow(duplicated(final_final))
+
+```
+## Explore data set
+
+Check that all orders in line_item are present in our orders dataset. 
+Exclude from line_item any rows that do not meet that condition.
+```{r Explore1 }
+#using inner_join
 new_Line_item<-inner_join(line_item,orders,by="id_order")
 dim(new_Line_item)
 head(new_Line_item)
 dim(line_item) - dim(new_Line_item)
+#list of the value of id_order which is present in order dataset
+line_item[line_item$id_order %in% new_Line_item$id_order,]
+count(line_item[line_item$id_order %in% new_Line_item$id_order,])
 
+#list of the value of id_order which is not present  in order table
+count(line_item[!(line_item$id_order %in% new_Line_item$id_order),])
+
+```
+Exclude from line_item any rows from orders that are not “Completed”.After filtering for completed orders we are left with 62103 observations. 
+ We removed almost 79% of observations that were not completed
+```{r Explore2 }
 new_Line_item_com <- filter(new_Line_item, state == "Completed")
 dim(new_Line_item_com)
 head(new_Line_item_com)
 (dim(line_item) - dim(new_Line_item_com))/dim(line_item)*100
-
+```
+Check that all products in line_item are present in the products dataset. 
+Exclude from line_item any rows that do not meet that condition.
+```{r Explore3}
 new_Line_item2 <- inner_join(new_Line_item_com, products, by="sku")
 dim(new_Line_item2)
 head(new_Line_item2)
 dim(new_Line_item_com) - dim(new_Line_item2)
+
+
+#list of the value of sku which is present in order dataset
+line_item[line_item$sku %in% new_Line_item2$sku,]
+count(line_item[line_item$sku %in% new_Line_item2$sku,])
+#list of the value of sku which is not present  in order table
+count(line_item[!(line_item$sku %in% new_Line_item2$sku),])
+```
+After inner join of line_item_new and products table we have check if all products from line_item are present in the products table. Our final dataset has 61700 observation
+
+## Cleaning and preprocessing
+Let's transform and format the created_date column, make two new colomns Date and Time 
+and remove the created_date and date columns
+```{r Explore4}
+new_Line_item2$Date <- as.Date(new_Line_item2$created_date)
+new_Line_item2$Time <- format(as.POSIXct(new_Line_item2$created_date), format="%H:%M:%S")
+
+new_Line_item2$date <- NULL
+new_Line_item2$created_date <- NULL
+
+dim(new_Line_item2)
+head(new_Line_item2)
+```
+
 
 # Let's transform and format the created_date column, make two new colomns Date and Time 
 # and remove the created_date and date columns

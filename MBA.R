@@ -123,8 +123,8 @@ head(compare_total)
 dim(compare_total)
 
 #compare_total$price_diff<-compare_total$total_paid-compare_total$count_price
-mutate(compare_total,price_diff=total_paid-count_price)
-#compare_total$price_diff<-compare_total$count_price-compare_total$total_paid
+#mutate(compare_total,price_diff=total_paid-count_price)
+compare_total$price_diff<-compare_total$count_price-compare_total$total_paid
 head(compare_total)
 dim(compare_total)
 
