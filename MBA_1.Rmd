@@ -1,0 +1,330 @@
+---
+title: "Market_Basket_Analysis"
+author: "Ashiqur"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Load Library
+```{r Library}
+library(RMySQL)
+library(dplyr)
+library(ggplot2)
+```
+
+## Load Data
+There are three table in the SQL database server.below code is the procedure to retrieve the 
+table from the server
+# Connecting to db
+```{r Connecting_to_db}
+db_user <- 'data_student_berlin'
+db_password <- 'waai_has_shitty_internet'
+db_name <- 'pricehub'
+db_table <- 'products'
+db_host <- '34.89.228.59' # for local access
+db_port <- 3306
+
+mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
+                   dbname = db_name, host = db_host, port = db_port)
+```
+# Read data from db
+```{r read_data}
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+products <-  fetch(rs, n = -1)
+```
+
+# Import df 'line_item'
+```{r line_table}
+db_table <- 'line_item'
+s <- paste0("select * from ", db_table)
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+line_item <-  fetch(rs, n = -1)
+```
+
+
+# Import df 'orders'
+```{r orders_table}
+db_table <- 'orders'
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+orders <-  fetch(rs, n = -1)
+```
+
+# import df 'products'
+```{r products_table}
+db_table <- 'products'
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+products <-  fetch(rs, n = -1)
+```
+# Disconnect from Database 
+```{r exit}
+on.exit(dbDisconnect(mydb))
+```
+
+## Check for missing values
+check and count how many missing value is in the table
+```{r missing_value}
+any(is.na(line_item))
+any(is.na(orders))
+any(is.na(products))
+
+
+sum(is.null(line_item))
+sum(is.null(products))
+sum(is.null(orders))
+```
+
+##  exploring Three dataset
+
+```{r Summarise data}
+glimpse(c(line_item, orders, products))
+
+summary(c(line_item, orders, products))
+
+str(c(line_item, orders, products))
+
+sum(is.na(c(line_item, orders, products)))
+```
+
+## price difference in line_item and order:
+Explore the relationship between prices in line_item and order:
+
+```{r manual_price_calculate}
+head(line_item)
+dim(line_item)
+line_price <- line_item %>% 
+        group_by(id_order) %>% 
+        summarise(count_price = sum(product_quantity * unit_price))
+dim(line_price)
+head(line_price)
+line_new<-inner_join(line_item,line_price,by="id_order")
+head(line_new)
+dim(line_new)
+```
+counting id_order which is present only in both the table and calculate the price error
+```{r price_compare}
+
+compare_total<-inner_join(line_price,orders,by="id_order")
+head(compare_total)
+dim(compare_total)
+
+#mutate(compare_total,price_diff=total_paid-count_price)
+compare_total$price_diff<-compare_total$count_price-compare_total$total_paid
+compare_total$perc_diff <- round(((compare_total$count_price - compare_total$total_paid)/compare_total$total_paid)*100)
+head(compare_total)
+dim(compare_total)
+
+```
+# plot histogram 
+To check the frequency of price difference 
+```{r hist_price_diff}
+compare_total %>% 
+        filter(price_diff < 20, price_diff > -20) %>% 
+        ggplot(aes(price_diff)) +
+        geom_histogram()
+```
+
+## correct Value
+```{r correct_price diff}
+correct_price<-filter(compare_total,price_diff==0) 
+head(correct_price)
+dim(correct_price)
+```
+
+## in-correct Value
+There is some unexpected price difference that has noticed.so only price difference (-10 to 10 )value has been considered
+```{r incorrect_price diff}
+incorrect_price<-filter(compare_total,price_diff!=0) 
+head(incorrect_price)
+dim(incorrect_price)
+summary(incorrect_price)
+```
+
+## select value
+price difference from  -10 to +10 has considered
+```{r select}
+comp_10_f<-filter(compare_total,price_diff>=(-10) & price_diff<10)
+count(comp_10_f)
+head(comp_10_f)
+dim(comp_10_f)
+
+# if we take percentage valu
+#comp_10_f <- filter(comp_10_f, perc_diff < 10)
+#comp_10_f <- filter(comp_10_f, perc_diff > -10)
+```
+## plot Total paid vs price difference  
+```{r price_diff_plot}
+#ggplot(mapping = aes(y=comp_10_f$total_paid,x=comp_10_f$price_diff))+geom_point()
+comp_10_f  %>%
+  ggplot(aes(x=total_paid, y=price_diff)) + 
+  geom_point()
+```
+## suspicious value
+values have not been considered 
+```{r suspicious}
+suspicious_df<-anti_join(line_item,comp_10_f,by="id_order")
+summary(suspicious_df)
+dim(suspicious_df)
+
+```
+
+## price difference in line_item and products:
+counting sku which is present only in both the table and calculate the price error
+```{r sku}
+head(products)
+comp_sku<-inner_join(line_item, products, by="sku")
+dim(comp_sku)
+head(comp_sku)
+summary(comp_sku)
+
+comp_sku$sku_p_diff=comp_sku$price- comp_sku$unit_price 
+head(comp_sku)
+```
+# plot price difference vs price 
+To check the frequency of price difference 
+```{r sku_plot}
+#ggplot(mapping = aes(y=comp_sku$price,x=comp_sku$sku_p_diff))+geom_jitter()
+
+comp_sku  %>%
+  ggplot(aes(x=sku_p_diff, y=price)) + 
+  geom_point()
+```
+# plot histogram 
+To check the frequency of price difference 
+```{r hist_price_dif}
+comp_sku %>% 
+        filter(sku_p_diff < 1000, sku_p_diff > -1000) %>% 
+        ggplot(aes(sku_p_diff)) +
+        geom_histogram()
+```
+
+## select value
+price difference from  -10 to +10 has considered
+```{r select_p}
+sku_1000_f<-filter(comp_sku,sku_p_diff>=(-1000) & sku_p_diff<1000)
+count(sku_1000_f)
+head(sku_1000_f)
+```
+## Correct sku value
+```{r correct_sku }
+correct_sku_price<-filter(comp_sku,sku_p_diff==0) 
+head(correct_sku_price)
+dim(correct_sku_price)
+```
+## In-Correct sku value
+```{r incorrect_sku }
+suspicious_sku<-anti_join(line_item,sku_1000_f,by="sku")
+summary(suspicious_sku)
+dim(suspicious_sku)
+```
+## crosscheck 
+Check similer ID_order we deleted from both cases
+```{r crosscheck}
+head(suspicious_sku)
+dim(suspicious_sku)
+head(suspicious_df)
+dim(suspicious_df)
+
+comp_suspicious<-inner_join(suspicious_df, suspicious_sku, by="id_order")
+head(comp_suspicious)
+dim(comp_suspicious)
+```
+## Select Some specific value
+only  Completed item has been chosen  in line_item table
+```{r select_completed}
+comp_10_f_comp <- filter(comp_10_f, state == "Completed")
+dim(comp_10_f_comp)
+head(comp_10_f_comp)
+```
+## Final table
+```{r final_table}
+head(line_item)
+dim(line_item)
+
+dim(line_price)
+head(line_price)
+
+#line_new<-inner_join(line_item,line_price,by="id_order")
+head(line_new)
+
+dim(comp_10_f_comp)
+head(comp_10_f_comp)
+dim(comp_sku)
+head(comp_sku)
+
+dim(new_Line_item_com)
+head(new_Line_item_com)
+dim(comp_10_f_comp)
+head(comp_10_f_comp)
+count(sku_1000_f)
+dim(sku_1000_f)
+nrow(unique(sku_1000_f))
+nrow(duplicated(sku_1000_f))
+head(sku_1000_f)
+final_table<-comp_10_f_comp %>% 
+             filter(id_order %in% sku_1000_f$id_order)
+dim(final_table)
+head(final_table)
+nrow(unique(final_table))
+
+final_final <- inner_join(final_table, sku_1000_f, by="id_order")
+head(final_1)
+dim(final_1)
+nrow(unique(final_1))
+nrow(duplicated(final_1))
+#-------------------------------######################
+new_Line_item<-inner_join(line_item,orders,by="id_order")
+dim(new_Line_item)
+head(new_Line_item)
+dim(line_item) - dim(new_Line_item)
+
+new_Line_item_com <- filter(new_Line_item, state == "Completed")
+dim(new_Line_item_com)
+head(new_Line_item_com)
+(dim(line_item) - dim(new_Line_item_com))/dim(line_item)*100
+
+new_Line_item2 <- inner_join(new_Line_item_com, products, by="sku")
+dim(new_Line_item2)
+head(new_Line_item2)
+dim(new_Line_item_com) - dim(new_Line_item2)
+
+# Let's transform and format the created_date column, make two new colomns Date and Time 
+# and remove the created_date and date columns
+
+new_Line_item2$Date <- as.Date(new_Line_item2$created_date)
+new_Line_item2$Time <- format(as.POSIXct(new_Line_item2$created_date), format="%H:%M:%S")
+
+new_Line_item2$date <- NULL
+new_Line_item2$created_date <- NULL
+
+dim(new_Line_item2)
+
+# Let's remove some more unuseful columns
+  
+new_Line_item2 <- select(new_Line_item2, id_order, product_quantity, sku, unit_price, total_paid, name_en, short_desc_en, price, brand, manual_categories, Date, Time)
+
+dim(new_Line_item2)
+head(new_Line_item2)
+
+final_1 <- inner_join(comp_10_f_comp, comp_sku, by="sku")
+head(final_1)
+dim(final_1)
+
+
+
+```
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

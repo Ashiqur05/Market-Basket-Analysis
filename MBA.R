@@ -113,14 +113,18 @@ dim(line_price)
 head(line_price)
 sum(is.null(line_price))
 
+line_new<-inner_join(line_item,line_price,by="id_order")
+head(line_new)
+
 #View(line_price)
 
-compare_total<-inner_join(line_price,orders,by="id_order")
+compare_total<-inner_join(line_new,orders,by="id_order")
 head(compare_total)
 dim(compare_total)
 
-compare_total$price_diff<-compare_total$total_paid-compare_total$count_price
-#comp_total$price_diff<-comp_total$count_price-comp_total$total_paid
+#compare_total$price_diff<-compare_total$total_paid-compare_total$count_price
+mutate(compare_total,price_diff=total_paid-count_price)
+#compare_total$price_diff<-compare_total$count_price-compare_total$total_paid
 head(compare_total)
 dim(compare_total)
 
@@ -133,13 +137,18 @@ compare_total %>%
 
 #To explore individual id order 
 filter(compare_total,id_order==299552)
+filter(compare_total,price_diff>0)
         
 
-comp_10<-filter(compare_total,price_diff<10)
+comp_10<-filter(compare_total,price_diff<10 & price_diff!=0)
 count(comp_10)#that might be the delivery
+head(comp_10)
 
-comp_10<-filter(compare_total,price_diff>10)
+
+
+comp_10<-filter(compare_total,price_diff>=10)
 count(comp_10)
+head(comp_10)
 
 correct_price<-filter(compare_total,price_diff==0) 
 head(correct_price)
@@ -152,11 +161,82 @@ head(incorrect_price)
 dim(incorrect_price)
 summary(incorrect_price)
 #count(unique(incorrect_price$id_order))
-
 compare_total %>% 
         filter(price_diff < 10, price_diff > -10) %>% 
         ggplot(aes(correct_price)) +
         geom_histogram()
+
+comp_10_f<-filter(compare_total,price_diff>=(-10) & price_diff<10)
+count(comp_10_f)
+head(comp_10_f)
+
+ggplot(mapping = aes(y=comp_10_f$total_paid,x=comp_10_f$price_diff))+
+        geom_point()
+
+
+ggplot(mapping = aes(y=comp_10_f$count_price,x=comp_10_f$price_diff))+
+        geom_jitter()
+
+
+
+suspicious_df<-anti_join(line_item,comp_10_f,by="id_order")
+summary(suspicious_df)
+dim(suspicious_df)
+
+##product table and line table
+head(products)
+summary(products)
+str(products)
+glimpse(products)
+dim(products)
+colnames(products)
+
+comp_sku<-inner_join(line_item, products, by="sku")
+dim(comp_sku)
+head(comp_sku)
+summary(comp_sku)
+
+comp_sku$sku_p_diff=comp_sku$price- comp_sku$unit_price 
+head(comp_sku)
+
+ggplot(mapping = aes(y=comp_sku$price,x=comp_sku$sku_p_diff))+
+        geom_jitter()
+
+
+
+
+comp_sku %>% 
+        filter(sku_p_diff < 1000, sku_p_diff > -1000) %>% 
+        ggplot(aes(sku_p_diff)) +
+        geom_histogram()
+
+
+
+suspicious_sku<-anti_join(line_item,sku_1000_f,by="sku")
+head(suspicious_sku)
+summary(suspicious_sku)
+dim(suspicious_sku)
+
+
+correct_sku_price<-filter(comp_sku,sku_p_diff==0) 
+head(correct_sku_price)
+dim(correct_sku_price)
+
+#???check sku is similer or not from deleted outlier
+head(suspicious_sku)
+dim(suspicious_sku)
+head(suspicious_df)
+dim(suspicious_df)
+
+comp_suspicious<-inner_join(suspicious_df, suspicious_sku, by="id_order")
+head(comp_suspicious)
+dim(comp_suspicious)
+
+
+dim(line_price)
+head(line_price)
+sum(is.null(line_price))
+
 
 
 # Check that all orders in line_item are present in our orders dataset. 
