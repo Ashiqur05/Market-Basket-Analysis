@@ -5,11 +5,12 @@ date: "11/2/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(echo = TRUE)
 ```
-## Load Library
-```{r Library}
+## Load library
+```{r Library, message=FALSE}
 library(RMySQL)
 library(dplyr)
 library(ggplot2)
@@ -18,7 +19,7 @@ library(ggplot2)
 ## Load Data
 There are three table in the SQL database server.below code is the procedure to retrieve the 
 table from the server
-# Connecting to db
+#### Connecting to db
 ```{r Connecting_to_db}
 db_user <- 'data_student_berlin'
 db_password <- 'waai_has_shitty_internet'
@@ -30,15 +31,15 @@ db_port <- 3306
 mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
                    dbname = db_name, host = db_host, port = db_port)
 ```
-# Read data from db
-```{r read_data}
+#### Read data from db
+```{r read_data,warning=FALSE}
 s <- paste0("select * from ", db_table)
 rs <- dbSendQuery(mydb, s)
 products <-  fetch(rs, n = -1)
 ```
 
-# Import df 'line_item'
-```{r line_table}
+### Import df 'line_item'
+```{r line_table,warning=FALSE}
 db_table <- 'line_item'
 s <- paste0("select * from ", db_table)
 s <- paste0("select * from ", db_table)
@@ -47,23 +48,23 @@ line_item <-  fetch(rs, n = -1)
 ```
 
 
-# Import df 'orders'
-```{r orders_table}
+### Import df 'orders'
+```{r orders_table,warning=FALSE}
 db_table <- 'orders'
 s <- paste0("select * from ", db_table)
 rs <- dbSendQuery(mydb, s)
 orders <-  fetch(rs, n = -1)
 ```
 
-# import df 'products'
-```{r products_table}
+### import df 'products'
+```{r products_table,warning=FALSE}
 db_table <- 'products'
 s <- paste0("select * from ", db_table)
 rs <- dbSendQuery(mydb, s)
 products <-  fetch(rs, n = -1)
 ```
-# Disconnect from Database 
-```{r exit}
+### Disconnect from database 
+```{r exit,warning=FALSE}
 on.exit(dbDisconnect(mydb))
 ```
 
@@ -80,7 +81,7 @@ sum(is.null(products))
 sum(is.null(orders))
 ```
 
-##  exploring Three dataset
+## Exploring three dataset
 
 ```{r Summarise data}
 glimpse(c(line_item, orders, products))
@@ -92,7 +93,7 @@ str(c(line_item, orders, products))
 sum(is.na(c(line_item, orders, products)))
 ```
 
-## price difference in line_item and order:
+## Price difference in line_item and order:
 Explore the relationship between prices in line_item and order:
 
 ```{r manual_price_calculate}
@@ -103,9 +104,9 @@ line_price <- line_item %>%
         summarise(count_price = sum(product_quantity * unit_price))
 dim(line_price)
 head(line_price)
-line_new<-inner_join(line_item,line_price,by="id_order")
-head(line_new)
-dim(line_new)
+#line_new<-inner_join(line_item,line_price,by="id_order")
+#head(line_new)
+#dim(line_new)
 ```
 counting id_order which is present only in both the table and calculate the price error
 ```{r price_compare}
@@ -121,7 +122,7 @@ head(compare_total)
 dim(compare_total)
 
 ```
-# plot histogram 
+### Plot histogram 
 To check the frequency of price difference 
 ```{r hist_price_diff}
 compare_total %>% 
@@ -130,14 +131,14 @@ compare_total %>%
         geom_histogram()
 ```
 
-## correct Value
+### Correct Value
 ```{r correct_price diff}
 correct_price<-filter(compare_total,price_diff==0) 
 head(correct_price)
 dim(correct_price)
 ```
 
-## in-correct Value
+### In-correct Value
 There is some unexpected price difference that has noticed.so only price difference (-10 to 10 )value has been considered
 ```{r incorrect_price diff}
 incorrect_price<-filter(compare_total,price_diff!=0) 
@@ -146,7 +147,7 @@ dim(incorrect_price)
 summary(incorrect_price)
 ```
 
-## select value
+### Select value
 price difference from  -10 to +10 has considered
 ```{r select}
 comp_10_f<-filter(compare_total,price_diff>=(-10) & price_diff<10)
@@ -158,14 +159,16 @@ dim(comp_10_f)
 #comp_10_f <- filter(comp_10_f, perc_diff < 10)
 #comp_10_f <- filter(comp_10_f, perc_diff > -10)
 ```
-## plot Total paid vs price difference  
+### Plot Total paid vs price difference  
 ```{r price_diff_plot}
 #ggplot(mapping = aes(y=comp_10_f$total_paid,x=comp_10_f$price_diff))+geom_point()
 comp_10_f  %>%
   ggplot(aes(x=total_paid, y=price_diff)) + 
   geom_point()
 ```
-## suspicious value
+
+### Suspicious value
+
 values have not been considered 
 ```{r suspicious}
 suspicious_df<-anti_join(line_item,comp_10_f,by="id_order")
@@ -174,7 +177,7 @@ dim(suspicious_df)
 
 ```
 
-## price difference in line_item and products:
+## Price difference in line_item and products:
 counting sku which is present only in both the table and calculate the price error
 ```{r sku}
 head(products)
@@ -186,7 +189,7 @@ summary(comp_sku)
 comp_sku$sku_p_diff=comp_sku$price- comp_sku$unit_price 
 head(comp_sku)
 ```
-# plot price difference vs price 
+# Plot price difference vs price 
 To check the frequency of price difference 
 ```{r sku_plot}
 #ggplot(mapping = aes(y=comp_sku$price,x=comp_sku$sku_p_diff))+geom_jitter()
@@ -195,7 +198,7 @@ comp_sku  %>%
   ggplot(aes(x=sku_p_diff, y=price)) + 
   geom_point()
 ```
-# plot histogram 
+### Plot histogram 
 To check the frequency of price difference 
 ```{r hist_price_dif}
 comp_sku %>% 
@@ -204,26 +207,26 @@ comp_sku %>%
         geom_histogram()
 ```
 
-## select value
+### Select value
 price difference from  -10 to +10 has considered
 ```{r select_p}
 sku_1000_f<-filter(comp_sku,sku_p_diff>=(-1000) & sku_p_diff<1000)
 count(sku_1000_f)
 head(sku_1000_f)
 ```
-## Correct sku value
+### Correct sku value
 ```{r correct_sku }
 correct_sku_price<-filter(comp_sku,sku_p_diff==0) 
 head(correct_sku_price)
 dim(correct_sku_price)
 ```
-## In-Correct sku value
+### In-Correct sku value
 ```{r incorrect_sku }
 suspicious_sku<-anti_join(line_item,sku_1000_f,by="sku")
 summary(suspicious_sku)
 dim(suspicious_sku)
 ```
-## crosscheck 
+### Crosscheck 
 Check similer ID_order we deleted from both cases
 ```{r crosscheck}
 head(suspicious_sku)
@@ -235,28 +238,28 @@ comp_suspicious<-inner_join(suspicious_df, suspicious_sku, by="id_order")
 head(comp_suspicious)
 dim(comp_suspicious)
 ```
-## Select Some specific value
-only  Completed item has been chosen  in line_item table
+### Select Some specific value
+only  Completed item has been chosen  from line_item table
 ```{r select_completed}
 comp_10_f_comp <- filter(comp_10_f, state == "Completed")
 dim(comp_10_f_comp)
 head(comp_10_f_comp)
 ```
-## Final table
+### Final table
 After checking the prices and excluding the ones that are not explainable, 
 we now have to join two exploratory data sets with the final dataset. 
 ```{r final_table}
 
 
 #line_new<-inner_join(line_item,line_price,by="id_order")
-head(line_new)
+#head(line_new)
 
 dim(comp_10_f_comp)
 head(comp_10_f_comp)
 dim(comp_sku)
 head(comp_sku)
 
-count(sku_1000_f)
+
 dim(sku_1000_f)
 nrow(unique(sku_1000_f))
 nrow(duplicated(sku_1000_f))
@@ -267,11 +270,12 @@ dim(final_table)
 head(final_table)
 nrow(unique(final_table))
 
-final_final <- inner_join(final_table, sku_1000_f, by="id_order")
+final_final <- inner_join(final_table, line_item, by="id_order")
 head(final_final)
 dim(final_final)
 nrow(unique(final_final))
-nrow(duplicated(final_final))
+
+#(duplicated(final_final$id_order))
 
 ```
 ## Explore data set
@@ -285,11 +289,12 @@ dim(new_Line_item)
 head(new_Line_item)
 dim(line_item) - dim(new_Line_item)
 #list of the value of id_order which is present in order dataset
-line_item[line_item$id_order %in% new_Line_item$id_order,]
-count(line_item[line_item$id_order %in% new_Line_item$id_order,])
+list_common<-line_item[line_item$id_order %in% new_Line_item$id_order,]
+count(list_common)
 
 #list of the value of id_order which is not present  in order table
-count(line_item[!(line_item$id_order %in% new_Line_item$id_order),])
+list_notcommon<-line_item[!(line_item$id_order %in% new_Line_item$id_order),]
+count(list_notcommon)
 
 ```
 Exclude from line_item any rows from orders that are not “Completed”.After filtering for completed orders we are left with 62103 observations. 
