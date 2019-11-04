@@ -310,8 +310,8 @@ dim(new_Line_item_com) - dim(new_Line_item2)
 
 
 #list of the value of sku which is present in order dataset
-line_item[line_item$sku %in% new_Line_item2$sku,]
-count(line_item[line_item$sku %in% new_Line_item2$sku,])
+list_sku<-line_item[line_item$sku %in% new_Line_item2$sku,]
+count(list_sku)
 #list of the value of sku which is not present  in order table
 count(line_item[!(line_item$sku %in% new_Line_item2$sku),])
 ```
@@ -332,37 +332,6 @@ head(new_Line_item2)
 ```
 
 
-# Let's transform and format the created_date column, make two new colomns Date and Time 
-# and remove the created_date and date columns
-
-new_Line_item2$Date <- as.Date(new_Line_item2$created_date)
-new_Line_item2$Time <- format(as.POSIXct(new_Line_item2$created_date), format="%H:%M:%S")
-
-new_Line_item2$date <- NULL
-new_Line_item2$created_date <- NULL
-
-dim(new_Line_item2)
-
-# Let's remove some more unuseful columns
-  
-new_Line_item2 <- select(new_Line_item2, id_order, product_quantity, sku, unit_price, total_paid, name_en, short_desc_en, price, brand, manual_categories, Date, Time)
-
-dim(new_Line_item2)
-head(new_Line_item2)
-
-final_1 <- inner_join(comp_10_f_comp, comp_sku, by="sku")
-head(final_1)
-dim(final_1)
 
 
 
-```
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
