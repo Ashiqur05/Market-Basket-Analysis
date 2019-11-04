@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(RMySQL)
 library(dplyr)
 library(ggplot2)
+library(arules)
+library(arulesViz)
 ```
 
 ## Load Data
@@ -336,7 +338,23 @@ dim(new_Line_item2)
 head(new_Line_item2)
 ```
 
+## Market Basket Analysis
+We will use Association Rules by applying "Apriori Algorithm" to do this analysis.
 
+```{r dat_set }
+head(final_final)
+dim(final_final)
 
+final_df<-select(final_final,id_order,sku)
+head(final_df)
+write.csv(final_df, "final_df.csv", row.names = FALSE)
 
+tr<- read.transactions(("final_df.csv"), format = "single", 
+  header = TRUE, sep = ",", cols = c("id_order","sku"))
+
+inspect(tr[1:10])
+itemFrequencyPlot(tr,topN=20,type="absolute")
+head(tr)  
+summary(tr)
+```
 
