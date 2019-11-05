@@ -104,8 +104,9 @@ dim(line_item)
 line_price <- line_item %>% 
         group_by(id_order) %>% 
         summarise(count_price = sum(product_quantity * unit_price))
+      
 dim(line_price)
-head(line_price)
+head(line_price,50)
 #line_new<-inner_join(line_item,line_price,by="id_order")
 #head(line_new)
 #dim(line_new)
@@ -243,7 +244,8 @@ dim(comp_suspicious)
 ### Select Some specific value
 only  Completed item has been chosen  from line_item table
 ```{r select_completed}
-comp_10_f_comp <- filter(comp_10_f, state == "Completed")
+comp_10_f_add3 <- filter(comp_10_f, (state == "Completed" |state == "Pending"|state == "Place order"))
+comp_10_f_comp<-filter(comp_10_f,state == "Completed" )
 dim(comp_10_f_comp)
 head(comp_10_f_comp)
 ```
@@ -268,14 +270,20 @@ nrow(duplicated(sku_1000_f))
 head(sku_1000_f)
 final_table<-comp_10_f_comp %>% 
              filter(id_order %in% sku_1000_f$id_order)
+final_table_add3<-comp_10_f_add3 %>% 
+             filter(id_order %in% sku_1000_f$id_order)
+
 dim(final_table)
 head(final_table)
 nrow(unique(final_table))
 
 final_final <- inner_join(final_table, line_item, by="id_order")
-head(final_final)
+final_final_add3 <- inner_join(final_table_add3, line_item, by="id_order")
+head(final_final,50)
 dim(final_final)
 nrow(unique(final_final))
+view(final_final)
+dim(final_final_add3)
 
 #(duplicated(final_final$id_order))
 
@@ -341,20 +349,115 @@ head(new_Line_item2)
 ## Market Basket Analysis
 We will use Association Rules by applying "Apriori Algorithm" to do this analysis.
 
-```{r dat_set }
+#### Write data
+```{r write_data }
 head(final_final)
 dim(final_final)
 
-final_df<-select(final_final,id_order,sku)
+final_df<-select(final_final_add3,id_order,sku)
 head(final_df)
-write.csv(final_df, "final_df.csv", row.names = FALSE)
+dim(final_df)
+df_without_1<-final_df %>% 
+  group_by(id_order) %>% 
+  count(id_order)
+head(df_without_1)
+dim(df_without_1)
+#excluding transactions of size 1
 
-tr<- read.transactions(("final_df.csv"), format = "single", 
-  header = TRUE, sep = ",", cols = c("id_order","sku"))
+df_without_1<-df_without_1 %>% 
+  filter(n!=1)
+head(df_without_1)
+dim(df_without_1)
 
-inspect(tr[1:10])
-itemFrequencyPlot(tr,topN=20,type="absolute")
-head(tr)  
-summary(tr)
+df_tr_1<-final_df[final_df$id_order %in% df_without_1$id_order, ]
+head(df_tr_1)
+dim(df_tr_1)
+
+
+write.csv(df_tr_1, "final_df.csv", row.names = FALSE)
 ```
 
+#### Create a transactional file
+```{r transaction }
+transactional_df<- read.transactions(("final_df.csv"), format = "single", 
+  header = TRUE, sep = ",", cols = c("id_order","sku"))
+
+inspect(transactional_df)
+
+
+
+```
+
+#### Get to know my transactional data
+```{r Explore_data}
+#To view the transaction
+inspect(transactional_df)
+#To view certain number of transactions
+inspect(transactional_df[1:16])
+# Number of transactions.
+length(transactional_df)
+# Number of items per transaction 
+size(transactional_df[6:16]) 
+# Lists the transactions by conversion 
+LIST(transactional_df[6:16]) 
+# To see the item labels 
+itemLabels(transactional_df) 
+
+#visualise the items within your dataset
+
+#Least frequent product
+least<-itemFrequency(transactional_df)
+plot_bar<-barplot(sort(least, decreasing=T))
+#frequentItems <- eclat(transactional_df,parameter = list(supp = 0.007, maxlen = 30))
+
+#Most frequent product
+itemFrequency(transactional_df)["APP1184"]
+itemFrequency(transactional_df)[c("APP1184","APP1916","APP1916")]
+
+
+
+itemFrequencyPlot(transactional_df,topN=20,type="absolute",col = rainbow(20),cex.name=0.7)
+#Is there a way to plot using certain metrics?
+head(transactional_df)
+
+summary(transactional_df)
+
+#visualise the transactions within your dataset
+
+image(transactional_df,xcol=20,ycol=20,asp=3)
+
+image(sample(transactional_df,2000))
+
+```
+After obserbing the summary, i have found most frequent items is APP1184 and it sold 925 times
+and the average is 1.32.single item are sold 34872 times.
+
+## Apply the apriori algorithm
+```{r apriori_al}
+trans_rules<-apriori(transactional_df,parameter = list(supp = 0.001, conf = 0.7))#2
+trans_rules<-apriori(transactional_df,parameter = list(supp = 0.001, conf = 0.1))#1
+trans_rules<-apriori(transactional_df,parameter = list(supp = 0.001, conf = 0.007))#7
+trans_rules<-apriori(transactional_df,parameter = list(supp = 0.0004, conf = 0.007, minlen = 2))#232
+
+trans_rules<-apriori(transactional_df,parameter = list(supp = 100/length(trans_rules), conf = 0.007, minlen = 2))#232
+
+#trans_rules<-trans_rules[!redundant_rules]
+#inspact(trans_rules[20])
+
+#subset(trans_rules,rhs %in% c("APP1184 "))
+#inspect(subset(trans_rules,rhs %in% c("APP1184 ")))
+
+#when both at the same time(add a inside %)
+#inspect(subset(trans_rules,lhs %ain% c("APP1184 ","APP1916")))
+
+#when at least one at the same time
+#inspect(subset(trans_rules,lhs %in% c("APP1184 ","APP1916")))
+
+summary(trans_rules)
+inspect(trans_rules)
+trans_rules<-sort(trans_rules, by="confidence", decreasing=TRUE)
+inspect(trans_rules)
+#inspect(trans_rules[1:20])
+#redundant_tr_rules<-is.redundant(trans_rules)
+#summary(redundant_tr_rules)
+```
