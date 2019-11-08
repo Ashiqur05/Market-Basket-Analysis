@@ -1,0 +1,159 @@
+---
+title: "Product Recommendations"
+author: "Ashiqur"
+date: "11/7/2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Load library
+```{r Library, message=FALSE}
+library(RMySQL)
+library(dplyr)
+library(ggplot2)
+library(arules)
+library(arulesViz)
+```
+## Load Data
+```{r Load_Data}
+#write.csv(df_tr_1, "final_df.csv", row.names = FALSE)
+#After manipulating data set need to create a csv or some other file 
+transactional_df<- read.transactions(("final_df.csv"), format = "single", 
+  header = TRUE, sep = ",", cols = c("id_order","name_en"))
+
+
+```
+I exclude all transaction where a single item has been purchased 
+
+#### Get to know my transactional data
+```{r Explore}
+inspect(transactional_df[1:10])
+length(transactional_df)
+size(transactional_df[6:16]) 
+LIST(transactional_df[6:16]) 
+itemLabels(transactional_df[1:10]) 
+summary(transactional_df)
+```
+-To view certain number(1-10) of transactions
+-To view Number of transactions.
+-Number of items per transaction 
+-Lists the transactions by conversion 
+- To see the item labels 
+most frequent items: IPhone AppleCare Protection Plan (659)
+## visualization 
+
+```{r visualization}
+least<-itemFrequency(transactional_df)
+plot_bar<-barplot(sort(least, decreasing=T))
+
+#frequency plot for the top 20 items
+itemFrequencyPlot(transactional_df,topN=20,type="absolute",col = rainbow(20),cex.name=0.7,horiz=TRUE)
+
+#Is there a way to plot using certain metrics?
+
+image(transactional_df,xcol=20,ycol=20,asp=3)
+
+image(sample(transactional_df,2000))
+```
+
+## Apply the apriori algorithm
+```{r apriori_al}
+trans_rules<-apriori(transactional_df,parameter = list(supp = 11/length(transactional_df), conf=0.5))
+summary(trans_rules)
+inspect(trans_rules[1:7])
+```
+The number of rules generated: 35
+The distribution of rules by length: Most rules are 2 items long(19)
+
+## Explore apriori algorithm
+
+#### Explore_al-1
+
+Check if "IPhone AppleCare Protection Plan" is in the right side  of any rules or not
+```{r Explore_al}
+subset(trans_rules,rhs %in% c("IPhone AppleCare Protection Plan"))
+inspect(subset(trans_rules,rhs %in% c("IPhone AppleCare Protection Plan")))
+```
+There are 10 rules where "IPhone AppleCare Protection Plan" is in the right side
+
+#### Explore_al-2
+
+Check if "Minibatt iCharger Qi Wireless Charger Quick charge" and "Apple iPhone 64GB Space Gray X " are together  in the left side of any rules or not
+when both at the same time(add a inside %)
+```{r Explore_al-2}
+#when both at the same time(add a inside %)
+subset(trans_rules,lhs %ain% c( "Apple iPhone 64GB Space Gray X","Minibatt iCharger Qi Wireless Charger Quick charge"))                                                                           
+```
+There are 4 rules where "Minibatt iCharger Qi Wireless Charger Quick charge" and "Apple iPhone 64GB Space Gray X " are together  in the left side
+
+#### Explore_al-3
+
+Check if "IPhone AppleCare Protection Plan" and "Apple iPhone 64GB Space Gray X " are at least one in the left side of any rules or not
+```{r Explore_al-3}
+#when both at the same time(add a inside %)
+subset(trans_rules,lhs %in% c( "Apple iPhone 64GB Space Gray X","IPhone AppleCare Protection Plan"))                                                                           
+```
+There are 15 rules where "IPhone AppleCare Protection Plan" and "Apple iPhone 64GB Space Gray X " are are at least one  in the left side 
+
+#### Explore_al_4
+
+we wanted to have the most likely rules,We can easily sort by confidence by executing the following code.
+```{r Explore_al-4 }
+trans_rules<-sort(trans_rules, by="confidence", decreasing=TRUE)
+inspect(trans_rules[1:7])
+```
+if someone buysApple "iPhone 64GB Space Gray X,IPhone AppleCare Protection Plan","Minibatt iCharger Qi Wireless Charger Quick charge", they are 100% likely to buy "Minibatt iCharger Qi Wireless Charger Quick charge" too in that case it counts
+
+#### Explore_al_5
+
+Find the overall frequency that "IPhone AppleCare Protection Plan" appears in the data(i.e,its support)
+```{r Explore_al-5 }
+itemFrequency(transactional_df)["IPhone AppleCare Protection Plan"]
+```
+ This command tells us that overall 3.8% of carts can contain "IPhone AppleCare Protection Plan" so the prior probability to finding "IPhone AppleCare Protection Plan" as part of a transaction is about 3.8%.now this Association rules tells us that once we know that "Protector OtterBox Clearly Protected Alpha X Transparent Glass iPhone" is part of the transaction the probability of finding "IPhone AppleCare Protection Plan"is change it's going up to by a factor of 163.11194 (lift).so the lift is telling us the factor by which the probability of finding "IPhone AppleCare Protection Plan" increases once we know that "Protector OtterBox Clearly Protected Alpha X Transparent Glass iPhone" is part of the transection.
+ 
+## Redundancies
+
+Sometimes it is desirable to remove the rules that are subset of larger rules. To do so, use the below code to filter the redundant rules.
+```{r Redundancies }
+redundant_tr_rules<-is.redundant(trans_rules)
+summary(redundant_tr_rules)
+redundant_tr_rules<-trans_rules[!redundant_tr_rules]
+inspect(redundant_tr_rules[1:5])
+```
+
+#### Targeting Items on LHS
+
+we wanted to target items to generate rules. There are two types of targets we might be interested in #that are illustrated with an example of “IPhone AppleCare Protection Plan”:
+- What are customers likely to buy if they purchase "IPhone AppleCare Protection Plan"?
+
+```{r Target_items_l}
+trans_rules_t<-apriori(transactional_df,parameter = list(supp = 20/length(transactional_df), conf=0.4),appearance =list(default="rhs",lhs="IPhone AppleCare Protection Plan"))
+
+```
+There are no rules if we consider the "iPhone AppleCare Protection Plan" in the LHS.It makes sense because no one will take the protection plan if they don't buy any apple product. 
+
+#### Targeting Items on RHS
+
+What are customers likely to buy before buying "IPhone AppleCare Protection Plan"
+```{r Target_items_r}
+trans_rules_t<-apriori(transactional_df,parameter = list(supp = 20/length(transactional_df), conf=0.4),appearance =list(default="lhs",rhs="IPhone AppleCare Protection Plan"))
+trans_rules_t<-sort(trans_rules_t, by="confidence", decreasing=TRUE)
+inspect(trans_rules_t)
+
+```
+if customer buy "Protector OtterBox Clearly Protected Alpha X Transparent Glass iPhone"and "Minibatt iCharger Qi Wireless Charger Quick charge" then they are 88% likely to buy "IPhone AppleCare Protection Plan" 
+
+##### what is IPhone AppleCare Protection Plan
+
+"Every iPhone comes with one year of repair coverage and up to two years of technical support.The AppleCare Protection Plan for iPhone extends your repair coverage to two years from the date of your iPhone purchase. Should your iPhone, Apple iPhone Bluetooth®handsfree headset, or includedaccessories require service under the plan, Apple will repair them or provide a replacement. Whetheryou use iPhone with a Mac or PC, just one phone call can help resolve most issues"
+
+#### my observation
+
+if people buy one or more Apple products then they are most likely to buy "iPhone AppleCare Protection Plan" to secure their product for any type of technical damages
+because in one plan they can secure all their apple product.
+
+if someone buys expensive apple product or more then two apple product then you can recommend them "iPhone AppleCare Protection Plan".you can also give them some reduce price offer for more selll
