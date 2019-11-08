@@ -147,11 +147,11 @@ inspect(trans_rules_t)
 ```
 if customer buy "Protector OtterBox Clearly Protected Alpha X Transparent Glass iPhone"and "Minibatt iCharger Qi Wireless Charger Quick charge" then they are 88% likely to buy "IPhone AppleCare Protection Plan" 
 
-##### what is IPhone AppleCare Protection Plan
+##### what is iPhone AppleCare Protection Plan
 
 "Every iPhone comes with one year of repair coverage and up to two years of technical support.The AppleCare Protection Plan for iPhone extends your repair coverage to two years from the date of your iPhone purchase. Should your iPhone, Apple iPhone Bluetooth®handsfree headset, or includedaccessories require service under the plan, Apple will repair them or provide a replacement. Whetheryou use iPhone with a Mac or PC, just one phone call can help resolve most issues"
 
-#### my observation
+#### my Observation and Suggestion
 
 if people buy one or more Apple products then they are most likely to buy "iPhone AppleCare Protection Plan" to secure their product for any type of technical damages
 because in one plan they can secure all their apple product.
