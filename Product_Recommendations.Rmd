@@ -34,7 +34,7 @@ inspect(transactional_df[1:10])
 length(transactional_df)
 size(transactional_df[6:16]) 
 LIST(transactional_df[6:16]) 
-itemLabels(transactional_df[1:10]) 
+itemLabels(transactional_df)[1:10] 
 summary(transactional_df)
 ```
 -To view certain number(1-10) of transactions
@@ -43,6 +43,7 @@ summary(transactional_df)
 -Lists the transactions by conversion 
 - To see the item labels 
 most frequent items: IPhone AppleCare Protection Plan (659)
+
 ## visualization 
 
 ```{r visualization}
@@ -63,7 +64,7 @@ image(sample(transactional_df,2000))
 ```{r apriori_al}
 trans_rules<-apriori(transactional_df,parameter = list(supp = 11/length(transactional_df), conf=0.5))
 summary(trans_rules)
-inspect(trans_rules[1:7])
+inspect(trans_rules[1:4])
 ```
 The number of rules generated: 35
 The distribution of rules by length: Most rules are 2 items long(19)
@@ -77,7 +78,7 @@ Check if "IPhone AppleCare Protection Plan" is in the right side  of any rules o
 subset(trans_rules,rhs %in% c("IPhone AppleCare Protection Plan"))
 inspect(subset(trans_rules,rhs %in% c("IPhone AppleCare Protection Plan")))
 ```
-There are 10 rules where "IPhone AppleCare Protection Plan" is in the right side
+There are 7 rules where "IPhone AppleCare Protection Plan" is in the right side
 
 #### Explore_al-2
 
@@ -85,7 +86,7 @@ Check if "Minibatt iCharger Qi Wireless Charger Quick charge" and "Apple iPhone 
 when both at the same time(add a inside %)
 ```{r Explore_al-2}
 #when both at the same time(add a inside %)
-subset(trans_rules,lhs %ain% c( "Apple iPhone 64GB Space Gray X","Minibatt iCharger Qi Wireless Charger Quick charge"))                                                                           
+inspect(subset(trans_rules,lhs %ain% c( "Apple iPhone 64GB Space Gray X","Minibatt iCharger Qi Wireless Charger Quick charge")) )                                                                          
 ```
 There are 4 rules where "Minibatt iCharger Qi Wireless Charger Quick charge" and "Apple iPhone 64GB Space Gray X " are together  in the left side
 
@@ -94,7 +95,7 @@ There are 4 rules where "Minibatt iCharger Qi Wireless Charger Quick charge" and
 Check if "IPhone AppleCare Protection Plan" and "Apple iPhone 64GB Space Gray X " are at least one in the left side of any rules or not
 ```{r Explore_al-3}
 #when both at the same time(add a inside %)
-subset(trans_rules,lhs %in% c( "Apple iPhone 64GB Space Gray X","IPhone AppleCare Protection Plan"))                                                                           
+inspect(subset(trans_rules,lhs %in% c( "Apple iPhone 64GB Space Gray X","IPhone AppleCare Protection Plan")))                                                                         
 ```
 There are 15 rules where "IPhone AppleCare Protection Plan" and "Apple iPhone 64GB Space Gray X " are are at least one  in the left side 
 
@@ -125,9 +126,11 @@ redundant_tr_rules<-trans_rules[!redundant_tr_rules]
 inspect(redundant_tr_rules[1:5])
 ```
 
-#### Targeting Items on LHS
+## How to Find Rules Related To Given Item/s ?
 
-we wanted to target items to generate rules. There are two types of targets we might be interested in #that are illustrated with an example of “IPhone AppleCare Protection Plan”:
+#### Items on LHS
+
+we wanted to target items to generate rules. There are two types of targets we might be interested in that are illustrated with an example of “IPhone AppleCare Protection Plan”:
 - What are customers likely to buy if they purchase "IPhone AppleCare Protection Plan"?
 
 ```{r Target_items_l}
@@ -136,7 +139,7 @@ trans_rules_t<-apriori(transactional_df,parameter = list(supp = 20/length(transa
 ```
 There are no rules if we consider the "iPhone AppleCare Protection Plan" in the LHS.It makes sense because no one will take the protection plan if they don't buy any apple product. 
 
-#### Targeting Items on RHS
+#### Items on RHS
 
 What are customers likely to buy before buying "IPhone AppleCare Protection Plan"
 ```{r Target_items_r}
@@ -157,3 +160,10 @@ if people buy one or more Apple products then they are most likely to buy "iPhon
 because in one plan they can secure all their apple product.
 
 if someone buys expensive apple product or more then two apple product then you can recommend them "iPhone AppleCare Protection Plan".you can also give them some reduce price offer for more selll
+
+```{r Target_items_l1}
+trans_rules_t<-apriori(transactional_df,parameter = list(supp = 11/length(transactional_df), conf=0.4),appearance =list(default="lhs",rhs="Apple Pencil"))
+inspect(trans_rules_t)
+
+```
+if the customer buy iPad then they are most likely to buy "Apple Pencil" so anything related with iPad recommends them Apple Pencil
